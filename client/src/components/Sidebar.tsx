@@ -32,7 +32,7 @@ import {
 import { InspectorConfig } from "@/lib/configurationTypes";
 import { ConnectionStatus } from "@/lib/constants";
 import useTheme from "../lib/hooks/useTheme";
-import { version } from "../../../package.json";
+// import { version } from "../../../package.json";
 import {
   Tooltip,
   TooltipTrigger,
@@ -218,7 +218,8 @@ const Sidebar = ({
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center">
           <h1 className="ml-2 text-lg font-semibold">
-            MCP Inspector v{version}
+            {/* MCP Inspector v{version} */}
+            Inspector.MCP.do
           </h1>
         </div>
       </div>
@@ -234,7 +235,8 @@ const Sidebar = ({
             </label>
             <Select
               value={transportType}
-              onValueChange={(value: "stdio" | "sse" | "streamable-http") =>
+              // onValueChange={(value: "stdio" | "sse" | "streamable-http") =>
+              onValueChange={(value: "sse" | "streamable-http") =>
                 setTransportType(value)
               }
             >

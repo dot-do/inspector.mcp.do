@@ -284,16 +284,17 @@ export function useConnection({
       },
     );
 
-    try {
-      await checkProxyHealth();
-    } catch {
-      setConnectionStatus("error-connecting-to-proxy");
-      return;
+    // Only check proxy health for stdio transport since it still uses the proxy
+    if (transportType === "stdio") {
+      try {
+        await checkProxyHealth();
+      } catch {
+        setConnectionStatus("error-connecting-to-proxy");
+        return;
+      }
     }
 
     try {
-      // Inject auth manually instead of using SSEClientTransport, because we're
-      // proxying through the inspector server first.
       const headers: HeadersInit = {};
 
       // Create an auth provider with the current server URL
@@ -307,18 +308,20 @@ export function useConnection({
         headers[authHeaderName] = `Bearer ${token}`;
       }
 
-      // Create appropriate transport
+      // Create appropriate transport - connect directly to the server
       let transportOptions:
         | StreamableHTTPClientTransportOptions
         | SSEClientTransportOptions;
 
-      let mcpProxyServerUrl;
+      let serverUrl: URL;
       switch (transportType) {
         case "stdio":
-          mcpProxyServerUrl = new URL(`${getMCPProxyAddress(config)}/stdio`);
-          mcpProxyServerUrl.searchParams.append("command", command);
-          mcpProxyServerUrl.searchParams.append("args", args);
-          mcpProxyServerUrl.searchParams.append("env", JSON.stringify(env));
+          // For stdio, we still need to go through proxy as it handles process spawning
+          serverUrl = new URL(`${getMCPProxyAddress(config)}/stdio`);
+          serverUrl.searchParams.append("command", command);
+          serverUrl.searchParams.append("args", args);
+          serverUrl.searchParams.append("env", JSON.stringify(env));
+          serverUrl.searchParams.append("transportType", transportType);
           transportOptions = {
             authProvider: serverAuthProvider,
             eventSourceInit: {
@@ -334,8 +337,8 @@ export function useConnection({
           break;
 
         case "sse":
-          mcpProxyServerUrl = new URL(`${getMCPProxyAddress(config)}/sse`);
-          mcpProxyServerUrl.searchParams.append("url", sseUrl);
+          // Connect directly to the SSE server
+          serverUrl = new URL(sseUrl);
           transportOptions = {
             eventSourceInit: {
               fetch: (
@@ -350,8 +353,8 @@ export function useConnection({
           break;
 
         case "streamable-http":
-          mcpProxyServerUrl = new URL(`${getMCPProxyAddress(config)}/mcp`);
-          mcpProxyServerUrl.searchParams.append("url", sseUrl);
+          // Connect directly to the streamable HTTP server
+          serverUrl = new URL(sseUrl);
           transportOptions = {
             eventSourceInit: {
               fetch: (
@@ -372,18 +375,14 @@ export function useConnection({
           };
           break;
       }
-      (mcpProxyServerUrl as URL).searchParams.append(
-        "transportType",
-        transportType,
-      );
 
       const clientTransport =
         transportType === "streamable-http"
-          ? new StreamableHTTPClientTransport(mcpProxyServerUrl as URL, {
+          ? new StreamableHTTPClientTransport(serverUrl, {
               sessionId: undefined,
               ...transportOptions,
             })
-          : new SSEClientTransport(mcpProxyServerUrl as URL, transportOptions);
+          : new SSEClientTransport(serverUrl, transportOptions);
 
       if (onNotification) {
         [
@@ -426,8 +425,11 @@ export function useConnection({
           instructions: client.getInstructions(),
         });
       } catch (error) {
+        const connectionTarget = transportType === "stdio" 
+          ? `MCP Server via the MCP Inspector Proxy: ${serverUrl}`
+          : `MCP Server directly: ${serverUrl}`;
         console.error(
-          `Failed to connect to MCP Server via the MCP Inspector Proxy: ${mcpProxyServerUrl}:`,
+          `Failed to connect to ${connectionTarget}:`,
           error,
         );
 
