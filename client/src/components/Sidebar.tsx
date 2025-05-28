@@ -67,6 +67,17 @@ interface SidebarProps {
   setConfig: (config: InspectorConfig) => void;
 }
 
+// Define predefined servers
+const PREDEFINED_SERVERS = {
+  "": { name: "Custom", url: "" },
+  "deepwiki": { name: "DeepWiki", url: "https://mcp.deepwiki.com/sse" },
+  "memory": { name: "Memory", url: "https://mcp.do/memory" },
+  "thinking": { name: "Thinking", url: "https://mcp.do/thinking" },
+  "planning": { name: "Planning", url: "https://mcp.do/planning" },
+  "markdown": { name: "Markdown", url: "https://mcp.do/markdown" },
+  "mdx": { name: "MDX", url: "https://mcp.do/mdx" },
+} as const;
+
 const Sidebar = ({
   connectionStatus,
   transportType,
@@ -100,7 +111,35 @@ const Sidebar = ({
   const [shownEnvVars, setShownEnvVars] = useState<Set<string>>(new Set());
   const [copiedServerEntry, setCopiedServerEntry] = useState(false);
   const [copiedServerFile, setCopiedServerFile] = useState(false);
+  const [selectedServer, setSelectedServer] = useState<string>(() => {
+    // Find which predefined server matches the current URL
+    const matchingServer = Object.entries(PREDEFINED_SERVERS).find(
+      ([, server]) => server.url === sseUrl
+    );
+    return matchingServer ? matchingServer[0] : "";
+  });
   const { toast } = useToast();
+
+  // Handle server selection
+  const handleServerChange = (serverKey: string) => {
+    setSelectedServer(serverKey);
+    if (serverKey && PREDEFINED_SERVERS[serverKey as keyof typeof PREDEFINED_SERVERS]) {
+      const server = PREDEFINED_SERVERS[serverKey as keyof typeof PREDEFINED_SERVERS];
+      setSseUrl(server.url);
+      // Set transport type to SSE when selecting a predefined server
+      setTransportType("sse");
+    }
+  };
+
+  // Handle manual URL changes
+  const handleUrlChange = (url: string) => {
+    setSseUrl(url);
+    // Check if the new URL matches any predefined server
+    const matchingServer = Object.entries(PREDEFINED_SERVERS).find(
+      ([, server]) => server.url === url
+    );
+    setSelectedServer(matchingServer ? matchingServer[0] : "");
+  };
 
   // Reusable error reporter for copy actions
   const reportError = useCallback(
@@ -124,21 +163,27 @@ const Sidebar = ({
       };
     }
     if (transportType === "sse") {
+      const serverName = selectedServer && PREDEFINED_SERVERS[selectedServer as keyof typeof PREDEFINED_SERVERS] 
+        ? PREDEFINED_SERVERS[selectedServer as keyof typeof PREDEFINED_SERVERS].name 
+        : "Custom Server";
       return {
         type: "sse",
         url: sseUrl,
-        note: "For SSE connections, add this URL directly in your MCP Client",
+        note: `For SSE connections to ${serverName}, add this URL directly in your MCP Client`,
       };
     }
     if (transportType === "streamable-http") {
+      const serverName = selectedServer && PREDEFINED_SERVERS[selectedServer as keyof typeof PREDEFINED_SERVERS] 
+        ? PREDEFINED_SERVERS[selectedServer as keyof typeof PREDEFINED_SERVERS].name 
+        : "Custom Server";
       return {
         type: "streamable-http",
         url: sseUrl,
-        note: "For Streamable HTTP connections, add this URL directly in your MCP Client",
+        note: `For Streamable HTTP connections to ${serverName}, add this URL directly in your MCP Client`,
       };
     }
     return {};
-  }, [transportType, command, args, env, sseUrl]);
+  }, [transportType, command, args, env, sseUrl, selectedServer]);
 
   // Memoized config entry generator
   const generateMCPServerEntry = useCallback(() => {
@@ -229,27 +274,52 @@ const Sidebar = ({
           <div className="space-y-2">
             <label
               className="text-sm font-medium"
-              htmlFor="transport-type-select"
+              htmlFor="server-select"
             >
-              Transport Type
+              Servers
             </label>
             <Select
-              value={transportType}
-              // onValueChange={(value: "stdio" | "sse" | "streamable-http") =>
-              onValueChange={(value: "sse" | "streamable-http") =>
-                setTransportType(value)
-              }
+              value={selectedServer}
+              onValueChange={handleServerChange}
             >
-              <SelectTrigger id="transport-type-select">
-                <SelectValue placeholder="Select transport type" />
+              <SelectTrigger id="server-select">
+                <SelectValue placeholder="Select a server" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="stdio">STDIO</SelectItem>
-                <SelectItem value="sse">SSE</SelectItem>
-                <SelectItem value="streamable-http">Streamable HTTP</SelectItem>
+                {Object.entries(PREDEFINED_SERVERS).map(([key, server]) => (
+                  <SelectItem key={key} value={key}>
+                    {server.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Show transport type selector when not using stdio */}
+          {selectedServer !== "" && (
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium"
+                htmlFor="transport-type-select"
+              >
+                Transport Type
+              </label>
+              <Select
+                value={transportType}
+                onValueChange={(value: "sse" | "streamable-http") =>
+                  setTransportType(value)
+                }
+              >
+                <SelectTrigger id="transport-type-select">
+                  <SelectValue placeholder="Select transport type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sse">SSE</SelectItem>
+                  <SelectItem value="streamable-http">Streamable HTTP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {transportType === "stdio" ? (
             <>
@@ -291,7 +361,7 @@ const Sidebar = ({
                   id="sse-url-input"
                   placeholder="URL"
                   value={sseUrl}
-                  onChange={(e) => setSseUrl(e.target.value)}
+                  onChange={(e) => handleUrlChange(e.target.value)}
                   className="font-mono"
                 />
               </div>
