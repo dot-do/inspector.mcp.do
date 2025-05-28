@@ -263,7 +263,7 @@ const Sidebar = ({
         <div className="flex items-center">
           <h1 className="ml-2 text-lg font-semibold">
             {/* MCP Inspector v{version} */}
-            Inspector.MCP.do
+            MCP.do
           </h1>
         </div>
       </div>
