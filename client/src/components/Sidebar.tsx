@@ -69,7 +69,6 @@ interface SidebarProps {
 
 // Define predefined servers
 const PREDEFINED_SERVERS = {
-  "": { name: "Custom", url: "" },
   "deepwiki": { name: "DeepWiki", url: "https://mcp.deepwiki.com/sse" },
   "memory": { name: "Memory", url: "https://mcp.do/memory" },
   "thinking": { name: "Thinking", url: "https://mcp.do/thinking" },
