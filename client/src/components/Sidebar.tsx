@@ -356,11 +356,11 @@ const Sidebar = ({
             <>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="sse-url-input">
-                  URL
+                  SSE URL
                 </label>
                 <Input
                   id="sse-url-input"
-                  placeholder="URL"
+                  placeholder="SSE URL"
                   value={sseUrl}
                   onChange={(e) => handleUrlChange(e.target.value)}
                   className="font-mono"
