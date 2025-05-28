@@ -43,7 +43,7 @@ describe("ToolsTab", () => {
     tools: mockTools,
     listTools: jest.fn(),
     clearTools: jest.fn(),
-    callTool: jest.fn(async () => {}),
+    callTool: jest.fn(async (_name: string, _params: Record<string, unknown>) => {}),
     selectedTool: null,
     setSelectedTool: jest.fn(),
     toolResult: null,
