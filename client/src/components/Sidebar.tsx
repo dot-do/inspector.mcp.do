@@ -295,6 +295,7 @@ const Sidebar = ({
           </div>
 
           {/* Show transport type selector when not using stdio */}
+          {/* Transport type selector - commented out as not needed
           {selectedServer !== "" && (
             <div className="space-y-2">
               <label
@@ -319,6 +320,7 @@ const Sidebar = ({
               </Select>
             </div>
           )}
+          */}
 
           {transportType === "stdio" ? (
             <>
